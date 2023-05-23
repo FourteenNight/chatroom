@@ -39,7 +39,7 @@
 						</div> -->
 					</div>
 					<div class="msg-input">
-						<a-textarea v-model="user.msg" allow-clear />
+						<a-textarea v-model="user.msg" @keydown.enter="onEnter($event)" allow-clear />
 						<a-space>
 							<a-button type="primary" @click="sendMsg">发送</a-button>
 						</a-space>
@@ -89,9 +89,19 @@ const isBroadcast = ref(true);
 const proxy = ref(null);
 const file = ref(null);
 
+function onEnter(e) {
+	if (e.shiftKey && e.keyCode == 13) {
+		e.preventDefault();
+		user.msg += "\n";
+	}
+	if (e.keyCode == 13) {
+		e.preventDefault();
+		sendMsg();
+	}
+}
 // 发送消息
 function sendMsg() {
-	if (chat.thisRoom && user.msg) {
+	if (chat.thisRoom && user.msg && user.msg != "\n") {
 		if (isBroadcast.value) {
 			wsStore.sendMessage(chat.thisRoom, user.msg);
 			user.msg = "";
@@ -225,8 +235,6 @@ function establishConnectionOfRooms() {
 			wsStore.connect(name, `${wsApi.chat}?user=${user.account}&roomName=${name}`);
 			wsStore.socket[name].onmessage = (e) => {
 				const { type, roomName, sender, time, data } = JSON.parse(e.data);
-				console.log(JSON.parse(e.data));
-
 				// 群聊消息
 				if (type == "broadcast") {
 					for (const item in chat.rooms) {
