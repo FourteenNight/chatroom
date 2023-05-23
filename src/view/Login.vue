@@ -5,7 +5,7 @@
 				<a-input
 					placeholder="账号"
 					v-model="user.account"
-					@keydown.enter.prevent="onEnterToTab"
+					@keydown.enter="onEnterToTab($event)"
 					@blur="checkAccount"
 					allow-clear
 				>
@@ -61,9 +61,8 @@ const user = reactive({
 	rePwd: "",
 });
 
-function onEnterToTab(event) {
-	console.log("onEnterToTab", event);
-	event.preventDefault();
+function onEnterToTab(e) {
+	e.preventDefault();
 	const nextInput = document.querySelector("#nextInput-pwd > span > input");
 	nextInput.focus();
 }
