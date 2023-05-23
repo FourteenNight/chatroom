@@ -19,7 +19,7 @@ const ModalContent = (item, user, callback) => {
 					onOk: () => {
 						const value = document.querySelector("#modal-input > input").value;
 						console.log(value);
-						if (value ) {
+						if (value) {
 							roomUpdate({ id: item.id, name: value, user: user })
 								.then((resp) => {
 									callback(resp);
@@ -28,9 +28,9 @@ const ModalContent = (item, user, callback) => {
 									console.error(error);
 									callback(error);
 								});
-						}else{
-							let resp = {code:400,msg:'频道名字为空'}
-							callback(resp)
+						} else {
+							let resp = { code: 400, msg: "频道名字为空" };
+							callback(resp);
 						}
 					},
 				});
@@ -61,7 +61,7 @@ const ModalContent = (item, user, callback) => {
 					onOk: () => {
 						const value = document.querySelector("#modal-input > input").value;
 						console.log(value);
-						if(value){
+						if (value) {
 							roomAdd({ name: value, user: user })
 								.then((resp) => {
 									callback(resp);
@@ -70,9 +70,9 @@ const ModalContent = (item, user, callback) => {
 									console.error(error);
 									callback(error);
 								});
-						}else{
-							let resp = {code:400,msg:'频道名字为空'}
-							callback(resp)
+						} else {
+							let resp = { code: 400, msg: "频道名字为空" };
+							callback(resp);
 						}
 					},
 				});

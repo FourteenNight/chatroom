@@ -25,15 +25,25 @@
 				<!-- 聊天消息显示 -->
 				<ul ref="scrollRef">
 					<li v-for="(item, index) in chat.msgs[chat.thisRoom]" :key="index">
-						<show-msg :name="item.name" :time="item.time" :msg="item.msg"></show-msg>
+						<show-msg :name="item.name" :time="item.time" :msg="item.msg" :isMsg="item.isMsg"></show-msg>
 					</li>
 				</ul>
 				<!-- 输入框 -->
-				<div class="msg-input">
-					<a-textarea v-model="user.msg" allow-clear />
-					<a-space>
-						<a-button type="primary" @click="sendMsg">发送</a-button>
-					</a-space>
+				<div class="user-input">
+					<div class="user-operation">
+						<div class="user-upload" @click="uploadFiler">
+							<icon-upload />
+						</div>
+						<!-- <div class="user-image">
+							<icon-image />
+						</div> -->
+					</div>
+					<div class="msg-input">
+						<a-textarea v-model="user.msg" allow-clear />
+						<a-space>
+							<a-button type="primary" @click="sendMsg">发送</a-button>
+						</a-space>
+					</div>
 				</div>
 			</div>
 			<div class="chat-online">
@@ -58,6 +68,7 @@ import { useUserStore, useWebSocketStore } from "@/store";
 import { wsApi } from "../../config";
 import { Modal } from "@arco-design/web-vue";
 import { ModalContent } from "../utils/modal";
+import { upload } from "@/api";
 
 const store = useUserStore();
 const wsStore = useWebSocketStore();
@@ -76,6 +87,7 @@ const user = reactive({
 const scrollRef = ref(null);
 const isBroadcast = ref(true);
 const proxy = ref(null);
+const file = ref(null);
 
 // 发送消息
 function sendMsg() {
@@ -96,6 +108,43 @@ function sendMsg() {
 		}
 	}
 }
+
+function uploadFiler() {
+	Modal.info({
+		title: `文件上传`,
+		content: () =>
+			h("input", {
+				type: "file",
+				onChange: (event) => {
+					file.value = event.target.files[0];
+				},
+			}),
+		hideCancel: false,
+		onOk: () => {
+			const fileName = file.value.name;
+			const reader = new FileReader();
+			reader.readAsDataURL(file.value);
+			// console.log(file.value.name);
+			reader.onload = (event) => {
+				const dataUrl = event.target?.result?.split(",");
+				// console.log(dataUrl[1]);
+				upload({ fileName: fileName, fileData: dataUrl[1], sender: user.name, receiver: chat.thisRoom })
+					.then((resp) => {
+						const { code, msg } = resp;
+						// console.log(resp);
+						if (code === 200) {
+							user.msg = `[files]#${fileName}`;
+							sendMsg();
+						}
+					})
+					.catch((error) => {
+						console.error(error);
+					});
+			};
+		},
+	});
+}
+
 // 频道点击
 function roomClick(item) {
 	item.isClick = true;
@@ -112,6 +161,7 @@ function roomClick(item) {
 		isBroadcast.value = false;
 	}
 }
+
 // 频道右键
 function handleContextMenu(item) {
 	const message = proxy.value._.appContext.config.globalProperties.$message;
@@ -179,15 +229,30 @@ function establishConnectionOfRooms() {
 				if (type == "broadcast") {
 					for (const item in chat.rooms) {
 						if (chat.rooms[item].name == roomName) {
-							showMessages({
-								roomName: item,
-								msgName: roomName,
-								data: {
-									sender: sender,
-									time: time,
-									msg: data,
-								},
-							});
+							const msgType = JSON.parse(data).split("#")[0];
+							if (msgType == "[files]") {
+								showMessages({
+									roomName: item,
+									msgName: roomName,
+									data: {
+										sender: sender,
+										time: time,
+										msg: data,
+										isMsg: false,
+									},
+								});
+							} else {
+								showMessages({
+									roomName: item,
+									msgName: roomName,
+									data: {
+										sender: sender,
+										time: time,
+										msg: data,
+										isMsg: true,
+									},
+								});
+							}
 						}
 					}
 				}
@@ -195,14 +260,28 @@ function establishConnectionOfRooms() {
 				if (type == "only-one-msgs") {
 					data.forEach((item) => {
 						const { channels_name, content, create_time, user } = item;
-						showMessages({
-							msgsName: channels_name,
-							data: {
-								sender: user,
-								time: create_time,
-								msg: content,
-							},
-						});
+						const msgType = JSON.parse(content).split("#")[0];
+						if (msgType == "[files]") {
+							showMessages({
+								msgsName: channels_name,
+								data: {
+									sender: user,
+									time: create_time,
+									msg: content,
+									isMsg: false,
+								},
+							});
+						} else {
+							showMessages({
+								msgsName: channels_name,
+								data: {
+									sender: user,
+									time: create_time,
+									msg: content,
+									isMsg: true,
+								},
+							});
+						}
 					});
 				}
 			};
@@ -223,29 +302,59 @@ function establishConnectionOfPersonal() {
 					// 私人消息
 					if (type == "personal") {
 						chat.online.forEach((user) => {
-							// 接收
+							// 接收方
 							if (user.name == sender) {
-								showMessages({
-									roomName: user.account,
-									msgsName: sender,
-									data: {
-										sender: sender,
-										time: time,
-										msg: data,
-									},
-								});
+								const msgType = JSON.parse(data).split("#")[0];
+								if (msgType == "[files]") {
+									showMessages({
+										roomName: user.account,
+										msgsName: sender,
+										data: {
+											sender: sender,
+											time: time,
+											msg: data,
+											isMsg: false,
+										},
+									});
+								} else {
+									showMessages({
+										roomName: user.account,
+										msgsName: sender,
+										data: {
+											sender: sender,
+											time: time,
+											msg: data,
+											isMsg: true,
+										},
+									});
+								}
 							}
-							// 发送
+							// 发送方
 							if (user.account == receiver) {
-								showMessages({
-									roomName: receiver,
-									msgsName: user.name,
-									data: {
-										sender: sender,
-										time: time,
-										msg: data,
-									},
-								});
+								const msgType = JSON.parse(data).split("#")[0];
+								if (msgType == "[files]") {
+									showMessages({
+										roomName: receiver,
+										msgsName: user.name,
+										data: {
+											sender: sender,
+											time: time,
+											msg: data,
+											isMsg: false,
+										},
+									});
+								} else {
+									showMessages({
+										roomName: receiver,
+										msgsName: user.name,
+										data: {
+											sender: sender,
+											time: time,
+											msg: data,
+											isMsg: true,
+										},
+									});
+								}
 							}
 						});
 					}
@@ -255,27 +364,55 @@ function establishConnectionOfPersonal() {
 						data.forEach((item) => {
 							const { receiver, sender, content, create_time } = item;
 							chat.online.forEach((user) => {
-								// 接收
+								// 接收方
 								if (user.name == sender) {
-									showMessages({
-										msgsName: sender,
-										data: {
-											sender: sender,
-											time: create_time,
-											msg: content,
-										},
-									});
+									const msgType = JSON.parse(content).split("#")[0];
+									if (msgType == "[files]") {
+										showMessages({
+											msgsName: sender,
+											data: {
+												sender: sender,
+												time: create_time,
+												msg: content,
+												isMsg: false,
+											},
+										});
+									} else {
+										showMessages({
+											msgsName: sender,
+											data: {
+												sender: sender,
+												time: create_time,
+												msg: content,
+												isMsg: true,
+											},
+										});
+									}
 								}
-								// 发送
+								// 发送方
 								if (user.account == receiver) {
-									showMessages({
-										msgsName: user.name,
-										data: {
-											sender: sender,
-											time: create_time,
-											msg: content,
-										},
-									});
+									const msgType = JSON.parse(content).split("#")[0];
+									if (msgType == "[files]") {
+										showMessages({
+											msgsName: user.name,
+											data: {
+												sender: sender,
+												time: create_time,
+												msg: content,
+												isMsg: false,
+											},
+										});
+									} else {
+										showMessages({
+											msgsName: user.name,
+											data: {
+												sender: sender,
+												time: create_time,
+												msg: content,
+												isMsg: true,
+											},
+										});
+									}
 								}
 							});
 						});
@@ -300,7 +437,7 @@ watch(chat, (newValue, oldValue) => {
 
 // 消息显示
 function showMessages({ roomName, msgsName, data }) {
-	const { sender, time, msg } = data;
+	const { sender, time, msg, isMsg } = data;
 	// 频道模块显示消息
 	if (roomName && roomName != user.account) {
 		if (!chat.rooms[roomName]) {
@@ -322,13 +459,13 @@ function showMessages({ roomName, msgsName, data }) {
 			name: sender,
 			time: time,
 			msg: JSON.parse(msg),
+			isMsg: isMsg,
 		});
 	}
 }
 
 onMounted(() => {
 	proxy.value = getCurrentInstance().proxy;
-	console.log(proxy.value);
 	wsStore.connect("ws", `${wsApi.ws}?user=${user.account}`);
 	wsStore.socket["ws"].onmessage = (e) => {
 		const { type, data } = JSON.parse(e.data);
@@ -429,10 +566,25 @@ onMounted(() => {
 	.room-name {
 		font-size: 2rem;
 	}
-	.msg-input {
-		@apply flex;
+	.user-input {
+		@apply flex flex-col;
 		height: 6rem;
 		padding: 1rem;
+		.user-operation {
+			@apply flex;
+			font-size: 1.2rem;
+			.user-upload,
+			.user-image {
+				margin: 0 0.5rem;
+				cursor: pointer;
+			}
+		}
+		.msg-input {
+			@apply flex;
+			button {
+				margin-left: 5px;
+			}
+		}
 	}
 
 	.chat-online {

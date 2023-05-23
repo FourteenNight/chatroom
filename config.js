@@ -31,4 +31,9 @@ const wsApi = {
 	personal: `${wsUrl()}/personal`,
 };
 
-export { baseUrl, userApi, wsApi, roomsApi };
+const fileApi = {
+	uploads: "/api/file/uploads",
+	download: `${baseUrl()}/api/file/download`,
+};
+
+export { baseUrl, userApi, wsApi, roomsApi, fileApi };
