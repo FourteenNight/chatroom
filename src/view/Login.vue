@@ -2,7 +2,13 @@
 	<div class="login">
 		<a-space direction="vertical">
 			<a-tooltip content="长度4-16,字母开头,允许字母数字下划线">
-				<a-input placeholder="账号" v-model="user.account" @keyup.enter="lineFeed" @blur="checkAccount" allow-clear>
+				<a-input
+					placeholder="账号"
+					v-model="user.account"
+					@keydown.enter.prevent="onEnterToTab"
+					@blur="checkAccount"
+					allow-clear
+				>
 					<template #prepend><icon-user /></template>
 				</a-input>
 			</a-tooltip>
@@ -12,7 +18,14 @@
 				</a-input>
 			</a-tooltip>
 			<a-tooltip content="长度6-18,以字母开头,允许含字母、数字和下划线">
-				<a-input-password placeholder="密码" :ref="classPwd" v-model="user.pwd" @blur="checkPwd" allow-clear>
+				<a-input-password
+					placeholder="密码"
+					id="nextInput-pwd"
+					v-model="user.pwd"
+					@blur="checkPwd"
+					@keyup.enter="doLogin"
+					allow-clear
+				>
 					<template #prepend><icon-lock /></template>
 				</a-input-password>
 			</a-tooltip>
@@ -41,7 +54,6 @@ const router = useRouter();
 const isLogin = ref(true);
 const proxy = ref(null);
 const allowRegister = ref(true);
-const classPwd = ref();
 const user = reactive({
 	name: "",
 	account: "",
@@ -49,10 +61,11 @@ const user = reactive({
 	rePwd: "",
 });
 
-function lineFeed() {
-	const pwd = classPwd;
-	console.log(pwd);
-	// pwd.password.focus();
+function onEnterToTab(event) {
+	console.log("onEnterToTab", event);
+	event.preventDefault();
+	const nextInput = document.querySelector("#nextInput-pwd > span > input");
+	nextInput.focus();
 }
 
 // 登录
