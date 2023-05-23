@@ -225,15 +225,17 @@ function establishConnectionOfRooms() {
 			wsStore.connect(name, `${wsApi.chat}?user=${user.account}&roomName=${name}`);
 			wsStore.socket[name].onmessage = (e) => {
 				const { type, roomName, sender, time, data } = JSON.parse(e.data);
+				console.log(JSON.parse(e.data));
+
 				// 群聊消息
 				if (type == "broadcast") {
 					for (const item in chat.rooms) {
 						if (chat.rooms[item].name == roomName) {
-							const msgType = JSON.parse(data).split("#")[0];
-							if (msgType == "[files]") {
+							const msgCut = JSON.parse(data).split("#");
+							if (msgCut[0] == "[files]") {
 								showMessages({
 									roomName: item,
-									msgName: roomName,
+									msgsName: roomName,
 									data: {
 										sender: sender,
 										time: time,
@@ -244,7 +246,7 @@ function establishConnectionOfRooms() {
 							} else {
 								showMessages({
 									roomName: item,
-									msgName: roomName,
+									msgsName: roomName,
 									data: {
 										sender: sender,
 										time: time,
@@ -260,8 +262,8 @@ function establishConnectionOfRooms() {
 				if (type == "only-one-msgs") {
 					data.forEach((item) => {
 						const { channels_name, content, create_time, user } = item;
-						const msgType = JSON.parse(content).split("#")[0];
-						if (msgType == "[files]") {
+						const msgCut = JSON.parse(content).split("#");
+						if (msgCut[0] == "[files]") {
 							showMessages({
 								msgsName: channels_name,
 								data: {
@@ -304,8 +306,8 @@ function establishConnectionOfPersonal() {
 						chat.online.forEach((user) => {
 							// 接收方
 							if (user.name == sender) {
-								const msgType = JSON.parse(data).split("#")[0];
-								if (msgType == "[files]") {
+								const msgCut = JSON.parse(data).split("#");
+								if (msgCut[0] == "[files]") {
 									showMessages({
 										roomName: user.account,
 										msgsName: sender,
@@ -331,8 +333,8 @@ function establishConnectionOfPersonal() {
 							}
 							// 发送方
 							if (user.account == receiver) {
-								const msgType = JSON.parse(data).split("#")[0];
-								if (msgType == "[files]") {
+								const msgCut = JSON.parse(data).split("#");
+								if (msgCut[0] == "[files]") {
 									showMessages({
 										roomName: receiver,
 										msgsName: user.name,
